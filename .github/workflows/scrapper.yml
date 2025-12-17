@@ -1,0 +1,36 @@
+name: Run Scraper on EC2
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+  workflow_dispatch:
+
+jobs:
+  deploy-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run scraper on EC2 via SSH
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            BASE_DIR="/home/${{ secrets.EC2_USER }}"
+            LOG_DIR="$BASE_DIR/logs"
+            TMP_LOG="$LOG_DIR/scrapper.tmp.log"
+
+            mkdir -p "$LOG_DIR"
+            
+            cd "$BASE_DIR/portfolio-data-scrapper"
+            git pull origin main
+            npm install
+            npx playwright install chromium
+            /usr/bin/node scrapper.js >> "$TMP_LOG" 2>&1
+            
+            timestamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+            mv "$TMP_LOG" "$LOG_DIR/scrapper-$timestamp.log"
