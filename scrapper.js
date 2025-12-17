@@ -105,7 +105,7 @@ const parseGamesPageData = async (page) => {
         const imgEl = await gameEl.$('.col-image .image img');
         const lastPlayedEl = await gameEl.$('.lastplayed');
         const totalPlayedEl = await gameEl.$('.game-info .box .hours');
-        const platformEl = await gameEl.$('.game-info .box .platforms');
+        const platformEl = await gameEl.$('.game-info .box .platforms .inline-pf');
 
         const title = await titleEl.innerText();
         const imgUrl = (await imgEl.getAttribute('src')).replace(/(games\/)./, "$1l");
