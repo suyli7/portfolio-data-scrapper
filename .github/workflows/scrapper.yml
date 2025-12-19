@@ -34,6 +34,7 @@ jobs:
               "TMP_LOG=$LOG_DIR/scrapper.tmp.log",
               "mkdir -p $LOG_DIR",
               "cd $BASE_DIR/portfolio-data-scrapper",
+              "git config --global --add safe.directory /home/ec2-user/portfolio-data-scrapper"
               "git pull origin main",
               "npm install",
               "npx playwright install chromium",
