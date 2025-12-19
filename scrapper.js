@@ -62,8 +62,11 @@ const parseBooksProfileSectionData = async (page) => {
 
     const currentlyReading = await parseSectionBooks(sections[0]);
     const recentlyRead = await parseSectionBooks(sections[1]);
+    const toReadPilePaneTitle = await sections[2].$(':scope > h2')
+    const toReadCountText = await toReadPilePaneTitle.innerText();
+    const toReadCount = parseInt(toReadCountText.replace(/\D+/g, ""), 10) || 0;
 
-    return { currentlyReading, recentlyRead, readStyleSummary };
+    return { currentlyReading, recentlyRead, readStyleSummary, toReadCount };
 }
 
 const parseBooksPageData = (isFavPage) => async (page) => {
