@@ -5,6 +5,8 @@ frameworkVersion: '3'
 provider:
   name: aws
   runtime: nodejs20.x
+  deploymentBucket:
+    name: pds-serverless-deploys
   region: ${env:AWS_REGION_KEY}
   memorySize: 1024
   timeout: 300
