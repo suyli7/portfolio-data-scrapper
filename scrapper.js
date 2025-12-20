@@ -1,14 +1,14 @@
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
-const { chromium, Page } = require('playwright');
+const playwright = require('playwright-aws-lambda');
 require('dotenv').config({ quiet: true });
 
 const BOOKS_BASE_URL = process.env.BOOKS_BASE_URL;
 const BOOKS_ID = process.env.BOOKS_ID;
 const GAMES_URL = process.env.GAMES_URL;
 const GAME_SEARCH_BASE_URL = "https://thegamesdb.net/search.php?name=";
-const AWS_REGION = process.env.AWS_REGION;
-const AWS_S3_BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
-const AWS_S3_BUCKET_DIR = process.env.AWS_S3_BUCKET_DIR;
+const S3_REGION = process.env.S3_REGION;
+const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
+const S3_BUCKET_DIR = process.env.S3_BUCKET_DIR;
 
 const PAGE_OPTIONS = {
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
@@ -154,9 +154,9 @@ const PAGES_CONFIG = [
     }
 ];
 
-(async () => {
-    const s3 = new S3Client({ region: AWS_REGION });
-    const browser = await chromium.launch({
+exports.handler = async (event) => {
+    const s3 = new S3Client({ region: S3_REGION });
+    const browser = await playwright.launchChromium({
         headless: true,
         args: [
             '--no-first-run',
@@ -186,18 +186,43 @@ const PAGES_CONFIG = [
 
     try {
         const res = await s3.send(new PutObjectCommand({
-            Bucket: AWS_S3_BUCKET_NAME,
-            Key: `${AWS_S3_BUCKET_DIR}/data.json`,
+            Bucket: S3_BUCKET_NAME,
+            Key: `${S3_BUCKET_DIR}/data.json`,
             Body: JSON.stringify(finalPayload),
             ContentType: "application/json",
         }));
 
         const now = new Date();
-        console.log('Data refreshed successfully:');
-        console.log('  Timestamp:', now.toISOString());
-        console.log('  ETag:', res.ETag);
+        const logOutput = `
+            Data refreshed successfully:
+            Timestamp: ${now.toISOString()}
+            ETag: ${res.ETag}
+        `;
+        console.log(logOutput)
 
+        return {
+            statusCode: 200,
+            body: logOutput
+        };
     } catch (err) {
-        console.error('Error uploading data:', err);
+        const now = new Date();
+        const logOutput = `
+            Error uploading data
+            Timestamp: ${now.toISOString()}
+            ${err}
+        `;
+        console.log(logOutput);
+        return {
+            statusCode: 500,
+            body: logOutput
+        };
     }
-})();
+};
+
+if (process.env.IS_DEV) {
+    exports.handler({}).then(result => {
+        console.log("Local test result:", result);
+    }).catch(err => {
+        console.error("Local test error:", err);
+    });
+}

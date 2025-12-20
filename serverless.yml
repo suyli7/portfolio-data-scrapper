@@ -1,0 +1,32 @@
+service: portfolio-data-scrapper-serverless
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs24.x
+  region: ${env:AWS_REGION_KEY}
+  memorySize: 1024
+  timeout: 300
+  environment:
+    BOOKS_BASE_URL: ${env:BOOKS_BASE_URL}
+    BOOKS_ID: ${env:BOOKS_ID}
+    GAMES_URL: ${env:GAMES_URL}
+    S3_BUCKET_NAME: ${env:S3_BUCKET_NAME}
+    S3_BUCKET_DIR: ${env:S3_BUCKET_DIR}
+
+functions:
+  scrapper:
+    handler: scrapper.handler
+    name: ${env:LAMBDA_NAME}
+    events:
+      - schedule:
+          rate: cron(0 0/12 * * ? *)    # Every 12 hours
+          enabled: true
+          input:
+            message: "Triggering scraper"
+          timezone: America/Los_Angeles
+
+package:
+  exclude:
+    - node_modules/aws-sdk/**
