@@ -4,7 +4,7 @@ frameworkVersion: '3'
 
 provider:
   name: aws
-  runtime: nodejs24.x
+  runtime: nodejs20.x
   region: ${env:AWS_REGION_KEY}
   memorySize: 1024
   timeout: 300
