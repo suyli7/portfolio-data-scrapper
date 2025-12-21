@@ -6,8 +6,6 @@ provider:
   name: aws
   runtime: nodejs20.x
   role: ${env:LAMBDA_ROLE_ARN}
-  deploymentBucket:
-    name: pds-serverless-deploys
   region: ${env:AWS_REGION_KEY}
   memorySize: 1024
   timeout: 300
