@@ -38,5 +38,6 @@ jobs:
           BOOKS_ID: ${{ secrets.BOOKS_ID }}
           GAMES_URL: ${{ secrets.GAMES_URL }}
           LAMBDA_NAME: ${{ secrets.LAMBDA_NAME }}
+          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
           S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
           S3_BUCKET_DIR: ${{ secrets.S3_BUCKET_DIR }}
