@@ -32,3 +32,4 @@ functions:
 package:
   exclude:
     - node_modules/aws-sdk/**
+    - .github/

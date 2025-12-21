@@ -1,5 +1,6 @@
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
-const playwright = require('playwright-aws-lambda');
+const { chromium } = require('playwright-core');
+const chromiumLambda = require('@sparticuz/chromium');
 require('dotenv').config({ quiet: true });
 
 const BOOKS_BASE_URL = process.env.BOOKS_BASE_URL;
@@ -9,13 +10,10 @@ const GAME_SEARCH_BASE_URL = "https://thegamesdb.net/search.php?name=";
 const S3_REGION = process.env.S3_REGION;
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
 const S3_BUCKET_DIR = process.env.S3_BUCKET_DIR;
-
-const PAGE_OPTIONS = {
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-    locale: 'en-US',
-    timezoneId: 'America/Los_Angeles',
-    viewport: { width: 1440, height: 850 },
-};
+const IS_DEV = process.env.IS_DEV;
+const DEV_CHROMIUM_PATH = process.env.DEV_CHROMIUM_PATH;
+const ARGV = process.argv;
+const S3_UPLOAD_FLAG = '--s3-upload';
 
 const parseBookData = async (linkEl, imgEl) => {
     const linkHref = await linkEl.getAttribute('href');
@@ -154,17 +152,30 @@ const PAGES_CONFIG = [
     }
 ];
 
+
+const LAUNCH_OPTIONS = {
+    headless: IS_DEV ? true : chromiumLambda.headless,
+    args: IS_DEV ? [
+        '--no-first-run',
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-extensions'
+    ] : chromiumLambda.args,
+}
+
+const PAGE_OPTIONS = {
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    locale: 'en-US',
+    timezoneId: 'America/Los_Angeles',
+    viewport: { width: 1440, height: 850 },
+};
+
 exports.handler = async (event) => {
     const s3 = new S3Client({ region: S3_REGION });
-    const browser = await playwright.launchChromium({
-        headless: true,
-        args: [
-            '--no-first-run',
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-extensions'
-        ],
+    const browser = await chromium.launch({
+        ...LAUNCH_OPTIONS,
+        executablePath: IS_DEV ? DEV_CHROMIUM_PATH : await chromiumLambda.executablePath()
     });
     const context = await browser.newContext(PAGE_OPTIONS);
 
@@ -183,6 +194,12 @@ exports.handler = async (event) => {
     }
 
     await browser.close();
+
+    if (IS_DEV && !ARGV.includes(S3_UPLOAD_FLAG)) {
+        console.log('scrapped output:');
+        console.log(finalPayload);
+        return 'Local run completed';
+    };
 
     try {
         const res = await s3.send(new PutObjectCommand({
@@ -219,9 +236,9 @@ exports.handler = async (event) => {
     }
 };
 
-if (process.env.IS_DEV) {
+if (IS_DEV) {
     exports.handler({}).then(result => {
-        console.log("Local test result:", result);
+        console.log(result);
     }).catch(err => {
         console.error("Local test error:", err);
     });
