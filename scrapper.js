@@ -21,9 +21,13 @@ const parseBookData = async (linkEl, imgEl, editionInfoEl) => {
     const imgUrl = await imgEl.getAttribute('src');
     const [title, author] = imgMeta.split(' by ');
     const bookUrl = `${BOOKS_BASE_URL}${linkHref}`;
-    const editionInfo = await editionInfoEl.textContent();
-    const yearMatch = editionInfo?.match(/\b(18|19|20)\d{2}\b/);
-    const publishYear = yearMatch ? yearMatch[0] : null;
+    let publishYear = '';
+
+    if (editionInfoEl) {
+        const editionInfo = await editionInfoEl.innerText();
+        const yearMatch = editionInfo?.match(/\b(18|19|20)\d{2}\b/);
+        publishYear = yearMatch ? yearMatch[0] : null;
+    }
 
     return { title, author, bookUrl, imgUrl, publishYear };
 }
@@ -71,7 +75,7 @@ const parseBooksProfileSectionData = async (page) => {
 }
 
 const parseBooksPageData = (isFavPage) => async (page) => {
-    const panes = isFavPage ? await page.$$('.book-pane') : await page.$$('#up-next-book-panes .book-pane');
+    const panes = isFavPage ? await page.$$('#favorites-list .book-pane') : await page.$$('#up-next-book-panes .book-pane');
     const booksData = [];
     for (const pane of panes) {
         let tags = [];
