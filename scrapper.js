@@ -15,14 +15,17 @@ const DEV_CHROMIUM_PATH = process.env.DEV_CHROMIUM_PATH;
 const ARGV = process.argv;
 const S3_UPLOAD_FLAG = '--s3-upload';
 
-const parseBookData = async (linkEl, imgEl) => {
+const parseBookData = async (linkEl, imgEl, editionInfoEl) => {
     const linkHref = await linkEl.getAttribute('href');
     const imgMeta = await imgEl.getAttribute('alt');
     const imgUrl = await imgEl.getAttribute('src');
     const [title, author] = imgMeta.split(' by ');
     const bookUrl = `${BOOKS_BASE_URL}${linkHref}`;
+    const editionInfo = await editionInfoEl.textContent();
+    const yearMatch = editionInfo?.match(/\b(18|19|20)\d{2}\b/);
+    const publishYear = yearMatch ? yearMatch[0] : null;
 
-    return { title, author, bookUrl, imgUrl };
+    return { title, author, bookUrl, imgUrl, publishYear };
 }
 
 const parseBooksProfileSectionData = async (page) => {
@@ -88,10 +91,18 @@ const parseBooksPageData = (isFavPage) => async (page) => {
 
         const imgEl = await pane.$('.book-cover img');
         const linkEl = await pane.$('.book-cover a');
-        const bookData = await parseBookData(linkEl, imgEl);
+        const editionInfoEl = await pane.$('.toggle-edition-info-link');
+        const bookData = await parseBookData(linkEl, imgEl, editionInfoEl);
 
         booksData.push({ ...bookData, tags });
     }
+
+    if (isFavPage) {
+        booksData.sort((a, b) => {
+            return Number(b.publishYear) - Number(a.publishYear);
+        });
+    }
+
     return booksData;
 }
 
