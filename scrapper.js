@@ -1,4 +1,4 @@
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { chromium } = require('playwright-core');
 const chromiumLambda = require('@sparticuz/chromium');
 require('dotenv').config({ quiet: true });
@@ -14,6 +14,18 @@ const IS_DEV = process.env.IS_DEV;
 const DEV_CHROMIUM_PATH = process.env.DEV_CHROMIUM_PATH;
 const ARGV = process.argv;
 const S3_UPLOAD_FLAG = '--s3-upload';
+
+const isEmpty = (value) => {
+    if (Array.isArray(value)) {
+        return value.length === 0;
+    }
+
+    if (typeof value === "object" && value !== null) {
+        return Object.keys(value).length === 0;
+    }
+
+    return false;
+}
 
 const parseBookData = async (linkEl, imgEl, editionInfoEl) => {
     const linkHref = await linkEl.getAttribute('href');
@@ -188,6 +200,19 @@ const PAGE_OPTIONS = {
 
 exports.handler = async (event) => {
     const s3 = new S3Client({ region: S3_REGION });
+    const existingFileRes = await s3.send(new GetObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: `${S3_BUCKET_DIR}/data.json`
+    }));
+    const existingFileResJsonString = await existingFileRes.Body?.transformToString();
+    let existingData = {};
+
+    try {
+        existingData = JSON.parse(existingFileResJsonString);
+    } catch (err) {
+        console.log("Invalid JSON in fetching existing S3 file");
+    }
+
     const browser = await chromium.launch({
         ...LAUNCH_OPTIONS,
         executablePath: IS_DEV ? DEV_CHROMIUM_PATH : await chromiumLambda.executablePath()
@@ -203,7 +228,13 @@ exports.handler = async (event) => {
         await page.goto(url, { waitUntil: 'domcontentloaded' });
 
         const sectionData = await parser(page);
-        finalPayload[dKey] = sectionData;
+
+        if (isEmpty(sectionData)) {
+            console.log('Current scrap received empty data at section: ' + dKey);
+            finalPayload[dKey] = existingData[dKey];
+        } else {
+            finalPayload[dKey] = sectionData;
+        }
 
         await page.close();
     }
