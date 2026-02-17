@@ -19,11 +19,6 @@ const isEmpty = (value) => {
     if (Array.isArray(value)) {
         return value.length === 0;
     }
-
-    if (typeof value === "object" && value !== null) {
-        return Object.keys(value).length === 0;
-    }
-
     return false;
 }
 
@@ -221,22 +216,41 @@ exports.handler = async (event) => {
 
     const finalPayload = {};
 
-    for (const config of PAGES_CONFIG) {
-        const { url, parser, dKey } = config;
-
+    for (const { url, parser, dKey } of PAGES_CONFIG) {
         const page = await context.newPage();
-        await page.goto(url, { waitUntil: 'domcontentloaded' });
 
-        const sectionData = await parser(page);
+        try {
+            await page.goto(url, { waitUntil: 'domcontentloaded' });
+            const sectionData = await parser(page);
 
-        if (isEmpty(sectionData)) {
-            console.log('Current scrap received empty data at section: ' + dKey);
-            finalPayload[dKey] = existingData[dKey];
-        } else {
-            finalPayload[dKey] = sectionData;
+            const notProfileSection = dKey !== 'main';
+
+            if (notProfileSection) {
+                if (isEmpty(sectionData)) {
+                    console.log(`Current scrap received empty data at section: ${dKey}`);
+                    finalPayload[dKey] = existingData[dKey];
+                } else {
+                    finalPayload[dKey] = sectionData;
+                }
+
+                continue;
+            }
+
+            finalPayload.main = {};
+
+            for (const cat of Object.keys(sectionData)) {
+                if (isEmpty(finalPayload.main[cat])) {
+                    console.log(`Current scrap received empty data at main: ${cat}`);
+                    finalPayload.main[cat] = existingData.main[cat];
+                } else {
+                    finalPayload.main[cat] = sectionData[cat];
+                }
+            }
+
+
+        } finally {
+            await page.close();
         }
-
-        await page.close();
     }
 
     await browser.close();
