@@ -120,11 +120,11 @@ const parseBooksPageData = (isFavPage) => async (page) => {
 
 const parseGamesPageData = async (page) => {
     const gameEls = await page.$$('#app-Profile .user-container .list-unordered-base li>div');
-    const lastPlayedGames = gameEls.slice(0, 3);
+    const lastPlayedGames = gameEls.slice(0, 4);
     const gamesData = [];
 
     for (const gameEl of lastPlayedGames) {
-        const titleEl = await gameEl.$('.game-info .box h3 a[href^="https://www.exophase.com/game/"]');
+        const titleEl = await gameEl.$('.game-info .box h3');
         const imgEl = await gameEl.$('.col-image .image img');
         const lastPlayedEl = await gameEl.$('.lastplayed');
         const totalPlayedEl = await gameEl.$('.game-info .box .hours');
